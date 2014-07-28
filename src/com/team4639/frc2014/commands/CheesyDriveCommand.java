@@ -3,6 +3,7 @@ package com.team4639.frc2014.commands;
 import com.team4639.frc2014.Constants;
 import com.team4639.lib.ThrottledPrinter;
 import com.team4639.lib.Util;
+import com.sun.squawk.util.MathUtils;
 
 import edu.wpi.first.wpilibj.DriverStation;
 
@@ -31,15 +32,8 @@ public class CheesyDriveCommand extends CommandBase {
       return;
     }
     boolean isQuickTurn = controlBoard.getQuickTurn();
-    if(controlBoard.getAutoShift())
-        drive.toggleAutoShift();
-    if(drive.isAutoShift())
-        drive.autoShift();
-    else if(controlBoard.getShift())
-        drive.shift();
     boolean isHighGear=drive.isHighGear();
     double wheelNonLinearity;
-
     double wheel = handleDeadband(controlBoard.mainJoystick.getRawAxis(1), wheelDeadband);
     double throttle = -handleDeadband(controlBoard.mainJoystick.getRawAxis(3), throttleDeadband);
 
@@ -149,7 +143,34 @@ public class CheesyDriveCommand extends CommandBase {
       rightPwm = -1.0;
     }
 
-    drive.setLeftRightPower(leftPwm, rightPwm);
+    setLinearPower(leftPwm, rightPwm);
+  }
+  
+  private double linearize(double x)
+  {
+      if(Math.abs(x)<0.01)
+          x=0.0;
+      if(x>0.0)
+          return 4.5504*MathUtils.pow(x, 4)+-5.9762*MathUtils.pow(x, 3)+2.5895*MathUtils.pow(x,2)+-0.0869*x+0.0913;
+      else if(x<0.0)
+          return -linearize(-x);
+      else
+          return 0.0;
+  }
+  
+  public void setLinearPower(double left, double right)
+  {
+      double linearLeft=linearize(left);
+      double linearRight=linearize(right);
+      linearLeft=(linearLeft>1.0)? 1.0: (linearLeft<-1)?-1.0:linearLeft;
+      linearRight=(linearRight>1.0)? 1.0: (linearRight<-1)?-1.0:linearRight;
+      drive.setLeftRightPower(linearLeft, linearRight);
+      if(controlBoard.getAutoShift())
+        drive.toggleAutoShift();
+      if(drive.isAutoShift())
+        drive.autoShift(linearLeft,linearRight);
+      else if(controlBoard.getShift())
+        drive.shift();
   }
 
   protected boolean isFinished() {

@@ -30,8 +30,11 @@ public class Drive extends Subsystem {
 
   private DriveGearbox motors;
   Timer timer= new Timer();
-  private double lastShift=0;
-  private double timeDownshift=0;
+  private double lastShift=0.0;
+  private double lastExecution=0.0;
+  private double lastSpeed=0.0;
+  private double lastThrottleLeft=0.0;
+  private double lastThrottleRight=0.0;
   private DoubleSolenoid shifter = new DoubleSolenoid(Constants.shifterForward.getInt(),Constants.shifterReverse.getInt());
   private ChezyGyro gyro = new ChezyGyro(Constants.gyro.getInt());
   private boolean isHighGear = true;
@@ -148,14 +151,16 @@ public class Drive extends Subsystem {
   public double getGyroAngleInRadians() {
     return (getGyroAngle() * Math.PI) / 180.0;
   }
+  
   int resets = 0;
-  public void resetGyro() {
+  public void resetGyro() 
+  {
     System.out.println("Resetting gyro!!!!" + resets++);
     gyro.reset();
   }
 
-  public void shift() {
-    isAutoShift=false;
+  public void shift() 
+  {
     if(shifter.get()==DoubleSolenoid.Value.kReverse)
     {
         isHighGear=true;
@@ -166,7 +171,6 @@ public class Drive extends Subsystem {
         isHighGear=false;
         setLowGear();
     }
-    lastShift=timer.get();
     straightController.setGains(isHighGear ? highStraightGains : lowStraightGains);
     turnController.setGains(isHighGear ? highTurnGains : lowTurnGains);
   }
@@ -181,49 +185,68 @@ public class Drive extends Subsystem {
       return isAutoShift;
   }
   
-  public void autoShift()
+  //work in progress
+  public void autoShift(double left, double right)
   {
-    double temp;
-    double averageSpeed=Math.abs((motors.getLeftEncoder().getRate()+motors.getRightEncoder().getRate())/2);
-    if(timer.get()-lastShift>Constants.minTimeBetweenShifts.getDouble())
-    {
-        if(isHighGear)
-        {
-          if(averageSpeed>=Constants.downshiftLowSpeed.getDouble())
-          {
-            temp=0;
-          }
-          else
-          {
-            temp=(timer.get()-lastShift)+timeDownshift;
-          }
-          timeDownshift=temp;
-          if(temp>Constants.downshiftLowWaitTime.getDouble())
-          {
-            setLowGear();   
-          }
-          if(averageSpeed<Constants.downshiftSpeed.getDouble())
-          {
-              
-          }
-              
-        }
-        else 
-        {
-          
-        }
+    double averageSpeed=0.0;
+    double timeSinceLastShift=timer.get()-lastShift;
+    double timeSinceLastExecution=timer.get()-lastExecution;
+    if(motors.getLeftEncoder().getRate()==0.0)
+        averageSpeed=Math.abs(motors.getRightEncoder().getRate());
+    if(motors.getRightEncoder().getRate()==0.0)
+        averageSpeed=Math.abs(motors.getLeftEncoder().getRate());
+    if(motors.getLeftEncoder().getRate()==0.0&&motors.getRightEncoder().getRate()==0.0)
+        return;
+    if(averageSpeed==0.0)
+        averageSpeed=(Math.abs(motors.getLeftEncoder().getRate())+Math.abs(motors.getRightEncoder().getRate()))/2;
+    double acceleration= (averageSpeed-lastSpeed)/timeSinceLastExecution;
+    lastSpeed=averageSpeed;
+    if(left*right>=0.0 && (Math.abs(left)-Math.abs(right))>.15){//Makes sure not to shift when turning
+        if(timeSinceLastShift>=Constants.minTimeBetweenShifts.getDouble()){//Makes sure shifts are not done to close together
+            if(isHighGear){
+                if(averageSpeed<=Constants.downshiftLowSpeed.getDouble()){//Downshifting due to coasting
+                    setLowGear();
+                }
+                else if(averageSpeed<=Constants.downshiftSpeed.getDouble()){//Downshifting due to decelerating    
+                    if(acceleration<=Constants.downshiftDeceleration.getDouble()){
+                        if(Math.min(Math.abs(left), Math.abs(right))>=Constants.downshiftThrottle.getDouble()){
+                           setLowGear();
+                        }
+                    }
+                }
+            }
+            else{
+                if(averageSpeed>=4.8){
+                    if(acceleration>Constants.upshiftAcceleration.getDouble()){
+                        if(Math.min(Math.abs(left), Math.abs(right))>=Constants.upshiftThrottle.getDouble()){
+                            if((left-lastThrottleLeft+.2)>0.0&&(right-lastThrottleRight+.2)>0.0){
+                                setHighGear();
+                            }
+                        }
+                    }
+                }
+            }
+        } 
     }
-    lastShift=timer.get();
-      
-  }
-  public void setHighGear()
+    lastThrottleLeft=left;
+    lastThrottleRight=right;
+}
+    
+ public void setHighGear()
   {
       shifter.set(DoubleSolenoid.Value.kReverse);
+      lastShift=timer.get();
   }
   
-  public void setLowGear()
+ public void setExecution()
+ {
+    lastExecution= timer.get();
+ }
+ 
+public void setLowGear()
   {
       shifter.set(DoubleSolenoid.Value.kReverse);
+      lastShift=timer.get();
   }
   
   public boolean isHighGear() {
