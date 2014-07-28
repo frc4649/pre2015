@@ -30,7 +30,7 @@ import com.team4639.frc2014.commands.OneLow;
 public class Robot extends IterativeRobot {
     private AutoModeSelector autoModeSelector;
     private CommandGroup currentAutoMode;
-    Command autonomousCommand;
+   // Command autonomousCommand;
     private Latch autonSelectLatch = new Latch();
     private Latch reinitGyroLatch = new Latch();
     double lastAngle = 0;
@@ -66,6 +66,7 @@ public class Robot extends IterativeRobot {
         CommandBase.drive.resetGyro();
         CommandBase.drive.setLeftRightPower(0, 0);
         CommandBase.motors.set(0);
+        lastAngle = CommandBase.drive.getGyroAngle();
     }
     
     public void disabledPeriodic()

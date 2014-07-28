@@ -171,6 +171,7 @@ public class CheesyDriveCommand extends CommandBase {
         drive.autoShift(linearLeft,linearRight);
       else if(controlBoard.getShift())
         drive.shift();
+      drive.setExecution();
   }
 
   protected boolean isFinished() {

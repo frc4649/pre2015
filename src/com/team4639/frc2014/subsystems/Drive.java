@@ -185,7 +185,6 @@ public class Drive extends Subsystem {
       return isAutoShift;
   }
   
-  //work in progress
   public void autoShift(double left, double right)
   {
     double averageSpeed=0.0;

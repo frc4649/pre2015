@@ -53,6 +53,8 @@ public class Constants extends ConstantsBase  {
   public static final Constant downshiftSpeed= new Constant("downshiftSpeed",6);
   public static final Constant downshiftDeceleration= new Constant("downshiftDeceleration",-1.2);
    public static final Constant downshiftThrottle= new Constant("downshiftThrottle",.75);
+   public static final Constant upshiftThrottle= new Constant("upshiftThrottle",.8);
+   public static final Constant upshiftAcceleration= new Constant("upshiftAcceleration",1.0);
   
   static {
     // Set any overridden constants from the file on startup.
